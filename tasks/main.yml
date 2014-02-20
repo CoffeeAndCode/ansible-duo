@@ -1,0 +1,27 @@
+---
+- name: install dependencies
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - libssl-dev
+    - python-pycurl
+
+- name: add Duo key
+  apt_key: url=http://pkg.duosecurity.com/APT-GPG-KEY-DUO
+
+- name: add Duo source
+  apt_repository: repo='deb http://pkg.duosecurity.com/Ubuntu precise main'
+
+- name: install Duo Unix SSH integration
+  apt: name=duo-unix state=latest update_cache=yes
+
+- name: install Duo config
+  template: src=login_duo.conf.j2 dest=/etc/duo/login_duo.conf owner=sshd group=0 mode=0600
+
+- name: reconfigure SSH to allow DUO_PASSCODE environment variable
+  lineinfile: dest=/etc/ssh/sshd_config
+              line="AcceptEnv DUO_PASSCODE"
+  notify: restart SSH
+
+- name: enable Duo security for remote logins
+  lineinfile: dest=/etc/ssh/sshd_config regexp=^ForceCommand line="ForceCommand /usr/sbin/login_duo"
+  notify: restart SSH
