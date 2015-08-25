@@ -1,0 +1,5 @@
+---
+duo:
+  use_pam: False
+  # Include trailing slash
+  #path_to_pam_duo: /lib64/security/

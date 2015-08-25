@@ -21,7 +21,20 @@
   lineinfile: dest=/etc/ssh/sshd_config
               line="AcceptEnv DUO_PASSCODE"
   notify: restart SSH
+  when: not duo.use_pam
 
 - name: enable Duo security for remote logins
   lineinfile: dest=/etc/ssh/sshd_config regexp=^ForceCommand line="ForceCommand /usr/sbin/login_duo"
   notify: restart SSH
+  when: not duo.use_pam
+
+- name: install pam_duo config
+  template: src=pam_duo.conf.j2 dest=/etc/duo/pam_duo.conf owner=sshd group=0 mode=0600
+  when: duo.use_pam
+
+- name: configure pam.d/sshd
+  replace: dest=/etc/pam.d/sshd regexp='{{ item }}' replace='auth required {{ duo.path_to_pam_duo|default() }}pam_duo.so' backup=yes
+  with_items:
+    - '^\@include\ common-auth$'
+    - '^auth required (?!{{ duo.path_to_pam_duo|default() }})pam_duo.so$'
+  when: duo.use_pam
